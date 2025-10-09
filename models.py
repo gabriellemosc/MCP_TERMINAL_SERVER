@@ -1,5 +1,5 @@
 #define a tabela de veículos e helpers
-
+import logging
 from datetime import datetime
 from typing import Optional
 from sqlalchemy import (
@@ -32,15 +32,15 @@ class Veiculos(Base):
     preco = Column(Float, nullable=False)
     disponivel = Column(Boolean, default=True) # Disponível para venda
 
-    descricao    = Column(Text, nullable=True)
 
       
     def __repr__(self):
         return f"<Carro - marca='{self.marca}' -  modelo='{self.modelo}' - ano={self.ano} -  preco={self.preco})>"
     
 
-#criar banco de dados
+#criar BD
 engine = create_engine('sqlite:///inventario.db') 
-Base.metadata.create_all(engine)
+if __name__ == "__main__":
+    Base.metadata.create_all(engine)
 
-print("BD Criado!")
+logging.info("BD criado!")
