@@ -1,10 +1,12 @@
 import socket
 import json
 import logging
-from protocol import (
+from .protocol import (
     MCPMessage, MCPRequest, MCPResponse, MCPMethod,
     create_success_response, create_error_response, MCPErrorCode
 )
+from sqlalchemy.orm import Session
+from models import Veiculos, engine
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -13,10 +15,7 @@ class MCPServer:
     def __init__(self, host="127.0.0.1", port=65432):
         self.host = host
         self.port = port
-        self.vehicles_db = [
-            {"id": 1, "marca": "Toyota", "modelo": "Corolla", "ano": 2022, "preco": 110000, "cor": "Prata", "quilometragem": 25000, "tp_combustivel": "Gasolina", "tp_transmissao": "Automática", "motorizacao": "2.0", "num_portas": 4, "disponivel": True},
-            {"id": 2, "marca": "Honda", "modelo": "Civic", "ano": 2020, "preco": 95000, "cor": "Preto", "quilometragem": 40000, "tp_combustivel": "Flex", "tp_transmissao": "Manual", "motorizacao": "1.8", "num_portas": 4, "disponivel": True}
-        ]
+        self.session = Session(bind=engine)
         logger.info(f"MCP Server listening on {host}:{port}")
 
     def start(self):
@@ -28,51 +27,146 @@ class MCPServer:
 
             while True:
                 conn, addr = s.accept()
+                logger.info(f"Connected by {addr}")
                 with conn:
-                    logger.info(f"Connected by {addr}")
-                    data = conn.recv(4096)
-                    if not data:
-                        break
-                    response = self.handle_message(data.decode())
-                    conn.sendall(response.encode())
+                    while True:
+                        try:
+                            # ✅ CORREÇÃO: Receber dados completos
+                            data = b""
+                            while True:
+                                chunk = conn.recv(4096)
+                                data += chunk
+                                if len(chunk) < 4096:
+                                    break
+                            
+                            if not data:
+                                continue
 
-    def handle_message(self, message_json: str) -> str:
-        """Process the MCP message and return the response as JSON."""
+                            message_str = data.decode("utf-8")
+                            logger.info(f"Received message: {message_str[:100]}...")
+                            
+                            response = self.handle_message(message_str)
+                            
+                            # ✅ CORREÇÃO: Enviar resposta completa de uma vez
+                            if hasattr(response, "to_json"):
+                                response_json = response.to_json()
+                            elif isinstance(response, dict):
+                                response_json = json.dumps(response)
+                            else:
+                                logger.warning(f"Unexpected response type: {type(response)}")
+                                response_json = json.dumps({"result": str(response)})
+
+                            
+                            # ✅ CORREÇÃO: Enviar todos os dados de uma vez
+                            conn.sendall(response_json.encode("utf-8"))
+                            logger.info(f"Sent response: {len(response_json)} characters")
+
+                        except Exception as e:
+                            logger.error(f"Error handling client: {e}")
+                            error_response = {"error": f"Internal server error: {str(e)}"}
+                            conn.sendall(json.dumps(error_response).encode("utf-8"))
+                            break
+
+    def handle_message(self, message_json: str):
+        """Process the MCP message and return the response."""
         try:
             message = MCPMessage.from_json(message_json)
 
             if message.method == MCPMethod.SEARCH_VEHICLES:
-                return self._handle_search(message).to_json()
+                return self._handle_search(message)
             elif message.method == MCPMethod.GET_VEHICLE:
-                return self._handle_get_vehicle(message).to_json()
+                return self._handle_get_vehicle(message)
             elif message.method == MCPMethod.HEALTH_CHECK:
-                return create_success_response(message, {"status": "ok"}).to_json()
+                return create_success_response(message, {"status": "ok"})
             else:
-                return create_error_response(message, MCPErrorCode.METHOD_NOT_FOUND, "Unknown method").to_json()
+                return create_error_response(message, MCPErrorCode.METHOD_NOT_FOUND, "Unknown method")
 
         except Exception as e:
             logger.exception("Error handling message")
-            return json.dumps({"error": f"Internal error: {e}"})
+            return create_error_response(
+                MCPMessage.from_json('{"jsonrpc":"2.0","id":"error","method":"unknown"}'),
+                MCPErrorCode.INTERNAL_ERROR,
+                f"Internal error: {e}"
+            )
 
-    def _handle_search(self, request: MCPRequest) -> MCPResponse:
-        params = request.params
+    def _handle_search(self, request):
+        params = request.params or {}
         marca = params.get("marca")
-        ano = params.get("ano")
+        modelo = params.get("modelo")
+        ano_min = params.get("ano_min")
+        ano_max = params.get("ano_max")
         tp_combustivel = params.get("tp_combustivel")
+        preco_min = params.get("preco_min")
+        preco_max = params.get("preco_max")
 
-        result = [v for v in self.vehicles_db if
-                  (not marca or v["marca"].lower() == marca.lower()) and
-                  (not ano or v["ano"] == ano) and
-                  (not tp_combustivel or v["tp_combustivel"].lower() == tp_combustivel.lower())]
+        query = self.session.query(Veiculos)
 
-        return create_success_response(request, {"results": result, "count": len(result)})
+        # ✅ CORREÇÃO: Usar os nomes corretos das colunas do seu models.py
+        if marca:
+            query = query.filter(Veiculos.marca.ilike(f"%{marca}%"))
+        if modelo:
+            query = query.filter(Veiculos.modelo.ilike(f"%{modelo}%"))
+        if ano_min:
+            query = query.filter(Veiculos.ano >= ano_min)
+        if ano_max:
+            query = query.filter(Veiculos.ano <= ano_max)
+        if tp_combustivel:
+            query = query.filter(Veiculos.tp_combustivel.ilike(f"%{tp_combustivel}%"))
+        if preco_min:
+            query = query.filter(Veiculos.preco >= preco_min)
+        if preco_max:
+            query = query.filter(Veiculos.preco <= preco_max)
 
-    def _handle_get_vehicle(self, request: MCPRequest) -> MCPResponse:
+        vehicles = query.all()
+        results = []
+        
+        for vehicle in vehicles:
+            vehicle_dict = {
+                'id': vehicle.id,
+                'marca': vehicle.marca,
+                'modelo': vehicle.modelo,
+                'ano': vehicle.ano,
+                'motorizacao': vehicle.motorizacao,
+                'tp_combustivel': vehicle.tp_combustivel,
+                'tp_transmissao': vehicle.tp_transmissao,
+                'num_portas': vehicle.num_portas,
+                'modelo_carro': vehicle.modelo_carro,
+                'cor': vehicle.cor,
+                'quilometragem': vehicle.quilometragem,
+                'preco': float(vehicle.preco),  # ✅ Converter para float
+                'disponivel': vehicle.disponivel
+            }
+            results.append(vehicle_dict)
+
+        logger.info(f"Search returned {len(results)} vehicles")
+        return create_success_response(request, {"results": results, "count": len(results)})
+    
+    def _handle_get_vehicle(self, request):
         vid = request.params.get("id")
-        vehicle = next((v for v in self.vehicles_db if v["id"] == vid), None)
+        if vid is None:
+            return create_error_response(request, MCPErrorCode.INVALID_PARAMS, "Vehicle ID not provided")
+
+        vehicle = self.session.query(Veiculos).filter(Veiculos.id == vid).first()
         if not vehicle:
             return create_error_response(request, MCPErrorCode.VEHICLE_NOT_FOUND, "Vehicle not found")
-        return create_success_response(request, vehicle)
+
+        result = {
+            'id': vehicle.id,
+            'marca': vehicle.marca,
+            'modelo': vehicle.modelo,
+            'ano': vehicle.ano,
+            'motorizacao': vehicle.motorizacao,
+            'tp_combustivel': vehicle.tp_combustivel,
+            'tp_transmissao': vehicle.tp_transmissao,
+            'num_portas': vehicle.num_portas,
+            'modelo_carro': vehicle.modelo_carro,
+            'cor': vehicle.cor,
+            'quilometragem': vehicle.quilometragem,
+            'preco': float(vehicle.preco),
+            'disponivel': vehicle.disponivel
+        }
+
+        return create_success_response(request, {"results": result, "count": 1})
 
 if __name__ == "__main__":
     MCPServer().start()

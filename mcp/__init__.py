@@ -9,7 +9,7 @@ Inclui servidor, cliente e tipos de mensagens.
 from .server import MCPServer
 
 # --- Cliente ---
-from .client import agent_conversation, send_mcp_request
+from .client import show_all_vehicles, send_mcp_request
 
 # --- Protocolo MCP ---
 from .protocol import (
