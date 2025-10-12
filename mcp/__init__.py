@@ -1,17 +1,17 @@
 # mcp/__init__.py
 
 """
-Pacote MCP: Implementação do Model Context Protocol (MCP)
-Inclui servidor, cliente e tipos de mensagens.
+Package: Implementation of MCP
+Include server, client and type of messages
 """
 
-# --- Servidor ---
+# SERVER
 from .server import MCPServer
 
-# --- Cliente ---
-from .client import show_all_vehicles, send_mcp_request
+# CLIENT
+from .client import  send_mcp_request          
 
-# --- Protocolo MCP ---
+# PROTOCOL MCP
 from .protocol import (
     MCPMessage,
     MCPRequest,
@@ -22,7 +22,7 @@ from .protocol import (
     create_error_response
 )
 
-# --- Tipos de mensagens específicos ---
+# TYPES OF MESSAGES
 from .message_type import (
     VehicleSearchRequest,
     VehicleSearchResponse,
@@ -31,7 +31,7 @@ from .message_type import (
     AvailableFilters
 )
 
-# --- Exportações públicas do pacote ---
+#  public exportations
 __all__ = [
     "MCPServer",
     "agent_conversation",

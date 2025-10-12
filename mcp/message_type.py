@@ -1,13 +1,11 @@
 """
-Tipos de mensagens e estruturas de dados do protocolo MCP
-para o domínio de veículos.
+ Types of messages and struct from MCP PROCOL
 """
 
 from pydantic import BaseModel, Field
-from pydantic import validator
+# from pydantic import validator
 from typing import Optional, List, Dict, Any
 from enum import Enum
-import uuid
 
 #import data from popular_bd.py
 try:
@@ -31,9 +29,9 @@ try:
     CATEGORIA_POR_MODELO = categoria_por_modelo
 
 except ImportError as e:
-    print(f"Não foi possivel importar {e}")
+    print(f"cannot be imported, creating data from the file itself {e}")
 
-    #Definir todas as variáveis necessárias
+    #var that will be needed
     cores = ["Branco", "Preto", "Prata", "Cinza", "Vermelho", "Azul", "Verde"]
     combustiveis = ["Gasolina", "Etanol", "Flex"]
     transmissoes = ["Manual", "Automática"]
@@ -129,6 +127,7 @@ class VehicleResponse(BaseModel):
 
 
 #REPONSE OF SEARCH SEND BY SERVER
+
 class VehicleSearchResponse(BaseModel):
     success: bool
     message: str
@@ -137,7 +136,7 @@ class VehicleSearchResponse(BaseModel):
     filters_applied: Dict[str, Any]
     search_id: str
 
-#MESSAGE STATUS OF SERVER
+# STATUS   SERVER
 class HealthResponse(BaseModel):
     status: str
     total_vehicles: int
@@ -145,7 +144,7 @@ class HealthResponse(BaseModel):
     server_version: str = "1.0.0"
 
 
-#FILTERS AVAILABLE FROM THE CLIENT
+#FILTERS AVAILABLE 
 class AvailableFilters(BaseModel):
     marcas: List[str] = Field(default_factory=lambda: MARCAS_DISPONIVEIS)
     combustiveis: List[str] = Field(default_factory=lambda: [e.value for e in TipoCombustivel])
@@ -154,21 +153,20 @@ class AvailableFilters(BaseModel):
     tipos_carro: List[str] = Field(default_factory=lambda: [e.value for e in ModeloCarro])
     ano_min: int = 2005
     ano_max: int = 2025
-    preco_min: float = 30000.0  
-    preco_max: float = 300000.0
+    preco_min: float = 3000.0  
+    preco_max: float = 3000000.0
 
 def validate_filters(filtros: VehicleSearchRequest) -> List[str]:
     errors = []
 
     if filtros.ano_min and filtros.ano_max and filtros.ano_min > filtros.ano_max:
-      errors.append("Ano mínimo não pode ser maior que ano máximo")
+      errors.append(" Min Year cannot be greater tha max Year")
     
     if filtros.preco_min and filtros.preco_max and filtros.preco_min > filtros.preco_max:
-         errors.append("Preço mínimo não pode ser maior que preço máximo")
+         errors.append(" Min Price canno ve greater than max pirce ")
     
     return errors
 
 if __name__ == "__main__":
-    # Teste rápido
-    print("✅ message_types.py carregado com sucesso!")
-    print(f"Marcas: {MARCAS_DISPONIVEIS}")
+    # test
+    print("message_types loaded")

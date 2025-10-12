@@ -20,6 +20,8 @@ class MCPMessageType(Enum):
     ERROR = "error"
 
 
+
+
 class MCPMethod(Enum):
     # Operations supported by MCP
     SEARCH_VEHICLES = "search_vehicles"
@@ -27,9 +29,8 @@ class MCPMethod(Enum):
     HEALTH_CHECK = "health_check"
     LIST_FILTERS = "list_filters"
 
-
 class MCPErrorCode(Enum):
-    # Error codes (based on JSON-RPC + custom domain errors)
+    # Error codes based on JSON-RPC 
     PARSE_ERROR = -32700
     INVALID_REQUEST = -32600
     METHOD_NOT_FOUND = -32601
@@ -44,6 +45,7 @@ class MCPErrorCode(Enum):
 
 class MCPError:
     # Represents an error message
+
 
     def __init__(self, code: int, message: str, data: Optional[Any] = None):
         self.code = code
@@ -68,10 +70,9 @@ class MCPError:
         return f"MCPError({self.code}: {self.message})"
 
 
+    # Base  for all MCP protocol messages
+
 class MCPMessage:
-    """
-    Base  for all MCP protocol messages
-    """
 
     def __init__(
         self,
@@ -92,8 +93,9 @@ class MCPMessage:
 
         self._validate()
 
-    def _validate(self):
+
         # basic message validation rules
+    def _validate(self):
         if self.message_type == MCPMessageType.REQUEST:
             if not self.method:
                 raise ValueError("Method is required for request")
@@ -135,8 +137,7 @@ class MCPMessage:
 
             if not isinstance(data, dict):
                 raise ValueError("Message must be a JSON object")
-
-            # figure out what type of message this is
+            # figure out the type of message 
             if "method" in data and "id" in data:
                 mtype = MCPMessageType.REQUEST
                 method = MCPMethod(data["method"])
@@ -152,9 +153,10 @@ class MCPMessage:
             else:
                 mtype = MCPMessageType.ERROR
                 method = None
-
             error_data = data.get("error")
             err = error_data if error_data else None
+
+
 
             return cls(
                 message_type=mtype,
@@ -194,16 +196,16 @@ class MCPMessage:
         return base + ")"
 
 
-class MCPRequest(MCPMessage):
+
     # request message
+class MCPRequest(MCPMessage):
     def __init__(self, method: MCPMethod, params: Optional[Dict[str, Any]] = None):
         super().__init__(
             message_type=MCPMessageType.REQUEST, method=method, params=params or {}
         )
 
-
-class MCPResponse(MCPMessage):
     # response message
+class MCPResponse(MCPMessage):
     def __init__(self, request: MCPMessage, result: Optional[Any] = None, error: Optional[MCPError] = None):
         err_dict = error.to_dict() if error else None
         super().__init__(
@@ -247,14 +249,18 @@ if __name__ == "__main__":
     req = MCPRequest(method=MCPMethod.SEARCH_VEHICLES, params={"marca": "Toyota", "ano_min": 2020})
     print(f"Request: {req}")
     print(f"JSON: {req.to_json()}")
+
+
     # success response
     resp = create_success_response(req, {"veiculos": [], "total": 0})
     print(f"Success response {resp}")
+
     # error response
     err_resp = create_error_response(req, MCPErrorCode.INVALID_PARAMS, "Invalid search params")
     print(f"Error response: {err_resp}")
+
+
     # parse JSON
     json_str = req.to_json()
     parsed = MCPMessage.from_json(json_str)
     print(f"Parsed: {parsed}")
-    print("MCP protocol tested successfully!")
