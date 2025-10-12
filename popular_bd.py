@@ -78,7 +78,7 @@ def alimentar_banco(quantidade=100):
         modelo = random.choice(modelos_por_marca[marca])  
         modelo_carro = categoria_por_modelo[modelo]
 
-        ano = random.randint(2005, 2024)
+        ano = random.randint(2005, 2025)
         motorizacao = f"{random.randint(1, 3)}.{random.choice(['0', '6', '8'])}" #ira criar valores padrões de motor como 1.0, 1.6, 2.0 e etc...
         tp_combustivel = random.choice(combustiveis)
         tp_transmissao = random.choice(transmissoes)
