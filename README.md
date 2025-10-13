@@ -1,6 +1,4 @@
-Perfeito, Gabriel! Aqui está o **README completo em inglês**, já todo formatado em **uma única seção de Markdown** pronta para copiar e colar:
 
-````markdown
 # Virtual Car Agent
 
 **Note:** Temporary repository
@@ -11,6 +9,7 @@ An interactive virtual assistant developed in Python to help users find cars bas
 
 ## Project Structure
 
+```
 Tech-Challege-C2S/
 │
 ├─ agent.py               # Main assistant code
@@ -27,7 +26,7 @@ Tech-Challege-C2S/
    ├─ server.py           # MCP server
    ├─ message_type.py     # Protocol message types
    └─ protocol.py         # MCP protocol logic
-
+```
 ---
 
 ## Installation & Setup
@@ -47,13 +46,29 @@ source venv/bin/activate   # Linux / macOS
 venv\Scripts\activate      # Windows
 ```
 
-3. **Install the dependencies:**
+3. **Install the dependencies**
 
-```bash
+```
 pip install -r requirements.txt
 ```
 
-4. **Start the MCP server in a separate terminal:**
+4. **Since the database (`inventario.db`) is not included, you need to create and populate it**
+ 
+- 4.1 Run the models to create tables:
+  ```
+   python3 models.py
+  
+  ```
+- 4.2 Populate the database with sample data:
+   ```
+
+   python3 popular_bd.py
+   
+   ```
+This script will populate the SQLite database (inventario.db) with random vehicles for testing purposes.
+
+
+5. **Start the MCP server in a separate terminal:**
 
 ```bash
 python3 -m mcp.server
@@ -106,17 +121,6 @@ This might take a moment...
 
 ---
 
-## Populating the Database
-
-If you want to generate sample data:
-
-```bash
-python3 popular_bd.py
-```
-
-This script will populate the SQLite database (`inventario.db`) with random vehicles for testing purposes.
-
----
 
 ## MCP Protocol
 
