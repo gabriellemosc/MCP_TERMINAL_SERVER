@@ -1,7 +1,6 @@
 
 # Virtual Car Agent
 
-**Note:** Temporary repository
 
 An interactive virtual assistant developed in Python to help users find cars based on filters such as make, model, year, fuel type, transmission, price, and more. The agent chats with the user, searches a database via the MCP protocol, and returns results in a clear and user-friendly format.
 
